@@ -14,6 +14,7 @@ const DEFAULT_MODELS = {
   openai: 'gpt-4o',
   anthropic: 'claude-sonnet-4-5-20250929',
   google: 'gemini-2.5-pro',
+  litellm: 'gpt-4o',
 } as const;
 
 /**
@@ -112,6 +113,21 @@ export class VercelAIProvider implements LLMProvider {
           );
         });
         return createGoogleGenerativeAI(apiKey ? { apiKey } : {})(modelId);
+      }
+      case 'litellm': {
+        const { createOpenAI } = await import('@ai-sdk/openai').catch(() => {
+          throw new Error(
+            'To use the LiteLLM provider, install the OpenAI adapter: npm install @ai-sdk/openai'
+          );
+        });
+        const baseURL = this.config.baseURL;
+        if (!baseURL) {
+          throw new Error(
+            'LiteLLM provider requires a baseURL. Pass it in the provider config.'
+          );
+        }
+        const litellmProvider = createOpenAI({ ...(apiKey ? { apiKey } : {}), baseURL });
+        return litellmProvider.chat(modelId);
       }
       default:
         throw new Error(`Unsupported provider type: ${this.config.type}`);
